@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDS Astronomical Observatory | Observatorium Tata Surya Lengkap</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            space: {
+              void: '#02040a',
+              panel: 'rgba(11, 16, 30, 0.94)',
+              card: 'rgba(16, 23, 42, 0.88)',
+              border: 'rgba(148, 163, 184, 0.2)',
+              sky: '#38bdf8',
+              emerald: '#34d399',
+              amber: '#fbbf24',
+              indigo: '#818cf8',
+              rose: '#fb7185'
+            }
+          },
+          fontFamily: {
+            display: ['Outfit', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Outfit, Plus Jakarta Sans, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Three.js (r128) & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- GSAP 3 for Smooth Camera Physics -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <!-- Preloaded HD Planet Textures (Zero CORS, 100% Offline) -->
+  <script src="assets/planet_textures.js"></script>
+
+  <!-- KaTeX for crystal clear mathematical equations -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #02040a;
+      color: #e2e8f0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* 3D Canvas Viewport */
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      cursor: grab;
+    }
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    /* Minimalist Top HUD Header */
+    .hud-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(2, 4, 10, 0.88) 0%, rgba(2, 4, 10, 0) 100%);
+      pointer-events: none;
+    }
+    .hud-header * {
+      pointer-events: auto;
+    }
+
+    /* 3D Screen Space Projected Pins Layer */
+    #planet-labels-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    /* Sleek Clean Floating 2D Pins (NO CLUTTER) */
+    .planet-pin {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      pointer-events: auto;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+      z-index: 10;
+    }
+    .planet-pin:hover {
+      transform: translate(-50%, -115%) scale(1.08);
+    }
+    .planet-tag {
+      background: rgba(10, 15, 29, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #f8fafc;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(56, 189, 248, 0.12);
+      white-space: nowrap;
+    }
+    .pin-stem {
+      width: 2px;
+      height: 18px;
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.7) 0%, transparent 100%);
+    }
+
+    /* Minimal Bottom Dock */
+    .warp-dock {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(9, 14, 28, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 0.5rem 0.8rem;
+      border-radius: 9999px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.1);
+      max-width: 95vw;
+      overflow-x: auto;
+    }
+    .dock-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .dock-btn:hover {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #f8fafc;
+      transform: translateY(-2px);
+    }
+
+    /* SOFT LUXURY MODAL (RELAXED CONTRAST, EASY FOR LATE NIGHT STUDY) */
+    #holo-modal {
+      user-select: text;
+    }
+    .holo-card {
+      background: rgba(10, 15, 28, 0.95);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 28px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.1);
+    }
+
+    .holo-text h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.95rem;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.3;
+      margin-bottom: 0.75rem;
+    }
+    .holo-text h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .holo-text p {
+      font-size: 1.1rem; /* Large comfortable font */
+      line-height: 1.85;
+      color: #cbd5e1;
+      margin-bottom: 1rem;
+    }
+    .holo-text li {
+      font-size: 1.08rem;
+      line-height: 1.8;
+      color: #e2e8f0;
+      margin-bottom: 0.5rem;
+    }
+    .code-box {
+      background: rgba(6, 10, 20, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      color: #7dd3fc;
+      line-height: 1.6;
+      margin: 1.25rem 0;
+      position: relative;
+      user-select: text;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(2, 4, 10, 0.7);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(56, 189, 248, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================== -->
+  <!-- 1. FULLSCREEN 3D WEBGL GALAXY CONTAINER    -->
+  <!-- ========================================== -->
+  <div id="canvas-container"></div>
+
+  <!-- 3D Projected Screen Pins Layer -->
+  <div id="planet-labels-layer"></div>
+
+  <!-- ========================================== -->
+  <!-- 2. SLEEK MINIMAL HUD HEADER                -->
+  <!-- ========================================== -->
+  <header class="hud-header">
+    <div class="flex items-center space-x-3.5">
+      <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 p-[1.5px] shadow-lg shadow-sky-500/20 flex items-center justify-center">
+        <div class="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center text-sky-400">
+          <i data-lucide="orbit" class="w-6 h-6 animate-spin" style="animation-duration: 25s;"></i>
+        </div>
+      </div>
+      <div>
+        <h1 class="font-display font-extrabold text-xl text-slate-100 tracking-tight">PDS <span class="text-sky-400">OBSERVATORY</span></h1>
+        <p class="text-xs text-slate-400">Tata Surya Lengkap • Klik Planet Berpenanda untuk Membuka Materi</p>
+      </div>
+    </div>
+
+    <!-- HUD Action Controls -->
+    <div class="flex items-center space-x-2 sm:space-x-3">
+      <!-- Cinematic Guided Tour Button -->
+      <button id="tour-btn" onclick="toggleGuidedTour()" title="Mulai Tour Sinematik Otomatis (T)" class="px-3 py-2 rounded-xl bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white font-bold text-xs flex items-center space-x-1.5 shadow-lg shadow-sky-500/25 transition">
+        <i id="tour-btn-icon" data-lucide="play" class="w-4 h-4 fill-white"></i>
+        <span id="tour-btn-label" class="hidden sm:inline">Tour Galaksi</span>
+      </button>
+
+      <!-- Orbit Speed Multiplier -->
+      <button id="speed-btn" onclick="cycleOrbitSpeed()" title="Ubah Kecepatan Orbit (Spasi untuk Jeda)" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-sky-400 hover:bg-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition shadow-lg">
+        <i data-lucide="gauge" class="w-4 h-4"></i>
+        <span id="speed-label" class="font-mono">1x</span>
+      </button>
+
+      <!-- Fullscreen Toggle -->
+      <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Layar Penuh (F)" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:text-sky-400 hover:bg-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition shadow-lg">
+        <i id="fullscreen-icon" data-lucide="maximize" class="w-4 h-4"></i>
+        <span class="hidden md:inline">Fullscreen</span>
+      </button>
+
+      <!-- Keyboard Shortcuts Info -->
+      <button onclick="toggleShortcutsModal()" title="Pintasan Keyboard (?)" class="p-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-400 hover:text-sky-400 hover:bg-slate-800 text-xs font-semibold transition shadow-lg">
+        <i data-lucide="keyboard" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Ambient Audio Toggle -->
+      <button id="sfx-toggle" onclick="toggleAudio()" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-sky-400 hover:bg-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition shadow-lg">
+        <i id="audio-icon" data-lucide="volume-2" class="w-4 h-4"></i>
+        <span id="audio-label" class="hidden sm:inline">SFX</span>
+      </button>
+
+      <!-- Reset Orbit Camera -->
+      <button onclick="resetOrbitView()" title="Kembali ke Pusat Orbit (Esc / 0)" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-sky-500/30 text-sky-300 font-bold text-xs flex items-center space-x-1.5 shadow-lg transition">
+        <i data-lucide="compass" class="w-4 h-4 text-sky-400"></i>
+        <span class="hidden sm:inline">Orbit Pusat</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- 3. BOTTOM QUICK-WARP DOCK (CLEAN TITLES)   -->
+  <!-- ========================================== -->
+  
+  <!-- ========================================== -->
+  <!-- 2.1 CINEMATIC GUIDED TOUR OVERLAY HUD       -->
+  <!-- ========================================== -->
+  <div id="tour-hud" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[92vw] bg-slate-900/95 backdrop-blur-2xl border border-sky-500/40 rounded-2xl p-4 shadow-2xl shadow-sky-500/20 opacity-0 pointer-events-none transition-all duration-300">
+    <!-- Progress Indicator Line -->
+    <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden mb-3">
+      <div id="tour-progress-bar" class="h-full bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-500 w-0 transition-all duration-300"></div>
+    </div>
+    <div class="flex items-center justify-between mb-1.5">
+      <div class="flex items-center gap-2">
+        <span id="tour-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-sky-500/20 text-sky-300 border border-sky-400/30">Step 1/5</span>
+        <h4 id="tour-title" class="font-display font-extrabold text-sm text-white">Bumi: Siklus Data Sains</h4>
+      </div>
+      <button onclick="endGuidedTour()" class="text-slate-400 hover:text-rose-400 transition" title="Keluar Tour"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <p id="tour-desc" class="text-xs text-slate-300 mb-3.5 leading-relaxed">Titik awal observasi: Membedah siklus hidup CRISP-DM dan pemetaan metodologi data sains modern.</p>
+    <div class="flex items-center justify-between gap-2">
+      <button onclick="prevTourStep()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 flex items-center gap-1 font-semibold transition">
+        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> <span>Sebelumnya</span>
+      </button>
+      <button onclick="openCurrentTourModal()" class="px-3 py-1.5 rounded-lg bg-sky-600/30 hover:bg-sky-600 border border-sky-500/40 text-xs text-sky-200 hover:text-white flex items-center gap-1.5 font-bold transition">
+        <i data-lucide="book-open" class="w-3.5 h-3.5"></i> <span>Buka Materi</span>
+      </button>
+      <button onclick="nextTourStep()" class="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs text-white flex items-center gap-1 font-bold shadow-md shadow-sky-600/30 transition">
+        <span>Berikutnya</span> <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2.2 KEYBOARD SHORTCUTS MODAL               -->
+  <!-- ========================================== -->
+  <div id="shortcuts-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300 bg-slate-950/80 backdrop-blur-md">
+    <div class="bg-slate-900/95 border border-slate-700/60 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="font-display font-bold text-slate-100 flex items-center gap-2">
+          <i data-lucide="keyboard" class="w-5 h-5 text-sky-400"></i>
+          Pintasan Keyboard (Shortcuts)
+        </h3>
+        <button onclick="toggleShortcutsModal()" class="text-slate-400 hover:text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="mt-4 space-y-2.5 text-xs text-slate-300">
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-800/50">
+          <span>Layar Penuh (Fullscreen)</span>
+          <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-sky-400 font-bold">F</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-800/50">
+          <span>Mulai / Jeda Tour Sinematik</span>
+          <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-sky-400 font-bold">T</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-800/50">
+          <span>Jeda / Lanjutkan Rotasi Orbit</span>
+          <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-sky-400 font-bold">Space</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-800/50">
+          <span>Lompat ke Modul Planet 1 - 5</span>
+          <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-sky-400 font-bold">1 ... 5</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-800/50">
+          <span>Kembali ke Pusat Orbit / Tutup Modal</span>
+          <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-sky-400 font-bold">Esc / 0</kbd>
+        </div>
+        <div class="flex items-center justify-between py-1.5">
+          <span>Buka / Tutup Bantuan Ini</span>
+          <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-sky-400 font-bold">?</kbd>
+        </div>
+      </div>
+      <button onclick="toggleShortcutsModal()" class="w-full mt-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 font-bold text-white text-xs transition">
+        Mengerti &amp; Tutup
+      </button>
+    </div>
+  </div>
+
+  <div class="warp-dock">
+    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Modul:</span>
+    <button onclick="warpToStudyPlanet('m1')" class="dock-btn hover:text-emerald-300">
+      <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+      <span>Siklus Data Sains</span>
+    </button>
+    <button onclick="warpToStudyPlanet('m2')" class="dock-btn hover:text-amber-300">
+      <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+      <span>Data Preprocessing</span>
+    </button>
+    <button onclick="warpToStudyPlanet('m3')" class="dock-btn hover:text-indigo-300">
+      <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+      <span>EDA &amp; Visualisasi</span>
+    </button>
+    <button onclick="warpToStudyPlanet('m4')" class="dock-btn hover:text-rose-300">
+      <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+      <span>Hierarchical Clustering</span>
+    </button>
+    <button onclick="warpToStudyPlanet('m5')" class="dock-btn hover:text-sky-300">
+      <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+      <span>Evaluasi Model</span>
+    </button>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- 4. CINEMATIC HOLO-READER MODAL (LARGE FONTS, NO HARSH NEON)    -->
+  <!-- ============================================================== -->
+  <div id="holo-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 opacity-0 pointer-events-none transition-all duration-300 bg-slate-950/80 backdrop-blur-xl">
+    
+    <div id="holo-panel" class="relative w-full max-w-4xl max-h-[92vh] holo-card p-6 sm:p-10 flex flex-col overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-3">
+          <span id="holo-badge" class="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-sky-500/15 text-sky-300 border border-sky-500/30">
+            Modul Pembelajaran
+          </span>
+          <span id="holo-readtime" class="text-xs text-slate-400 flex items-center gap-1.5 font-medium">
+            <i data-lucide="clock" class="w-4 h-4"></i> <span>5 Menit Baca</span>
+          </span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <!-- Text to Speech Audio Reader Button -->
+          <button onclick="readAloudModal()" title="Bacakan Materi (TTS)" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-sky-400 hover:bg-slate-800 transition">
+            <i data-lucide="mic" class="w-5 h-5"></i>
+          </button>
+          <!-- Close Button -->
+          <button onclick="closeHoloModal()" class="p-2.5 rounded-xl bg-slate-900 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Large-Font Content Body -->
+      <div id="holo-content-body" class="holo-text overflow-y-auto pr-3 space-y-4">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-4 mt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <span class="text-slate-400 font-mono">PDS Observatory • Standar Kurikulum FMIPA</span>
+        <button onclick="closeHoloModal()" class="px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold shadow-lg shadow-sky-600/30 transition flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Kembali ke Orbit Galaksi</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- 5. THREE.JS MASTER ENGINE WITH FULL SOLAR SYSTEM DETAILS       -->
+  <!-- ============================================================== -->
+  <script>
+    /* =========================================
+     * PROCEDURAL AUDIO SYNTHESIZER
+     * ========================================= */
+    const PDSSound = {
+      ctx: null,
+      enabled: true,
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      hover() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.05);
+          gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.05);
+        } catch(e) {}
+      },
+
+      click() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(130, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.08);
+        } catch(e) {}
+      },
+
+      warp() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.4);
+          gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.4);
+        } catch(e) {}
+      },
+
+      success() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const t = this.ctx.currentTime + (idx * 0.08);
+            gain.gain.setValueAtTime(0.07, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.22);
+          });
+        } catch(e) {}
+      }
+    };
+
+    function toggleAudio() {
+      PDSSound.enabled = !PDSSound.enabled;
+      const label = document.getElementById('audio-label');
+      const icon = document.getElementById('audio-icon');
+      if (PDSSound.enabled) {
+        label.innerText = 'SFX: ON';
+        icon.setAttribute('data-lucide', 'volume-2');
+        PDSSound.click();
+      } else {
+        label.innerText = 'SFX: MUTED';
+        icon.setAttribute('data-lucide', 'volume-x');
+      }
+      lucide.createIcons();
+    }
+
+    /* =========================================
+     * GLSL ATMOSPHERE GLOW SHADER
+     * ========================================= */
+    const AtmosphereShader = {
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = -mvPosition.xyz;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        uniform vec3 glowColor;
+        uniform float intensityPower;
+        void main() {
+          vec3 normal = normalize(vNormal);
+          vec3 viewDir = normalize(vViewPosition);
+          float intensity = pow(0.60 - dot(normal, viewDir), intensityPower);
+          gl_FragColor = vec4(glowColor, 1.0) * intensity;
+        }
+      `
+    };
+
+    /* =========================================
+     * FLAWLESS SATURN RING WITH POLAR UVs
+     * ========================================= */
+    function createSaturnRingMesh(innerR, outerR) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+
+      const grad = ctx.createLinearGradient(0, 0, 1024, 0);
+      grad.addColorStop(0.00, 'rgba(180, 160, 120, 0.0)');
+      grad.addColorStop(0.05, 'rgba(210, 185, 140, 0.7)');
+      grad.addColorStop(0.25, 'rgba(225, 205, 160, 0.85)');
+      grad.addColorStop(0.48, 'rgba(190, 170, 130, 0.6)');
+      // Cassini Division
+      grad.addColorStop(0.50, 'rgba(10, 12, 20, 0.05)');
+      grad.addColorStop(0.55, 'rgba(10, 12, 20, 0.05)');
+      // Outer Ring
+      grad.addColorStop(0.58, 'rgba(175, 150, 115, 0.65)');
+      grad.addColorStop(0.85, 'rgba(195, 170, 130, 0.75)');
+      grad.addColorStop(0.96, 'rgba(160, 140, 100, 0.3)');
+      grad.addColorStop(1.00, 'rgba(160, 140, 100, 0.0)');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1024, 64);
+      const ringTex = new THREE.CanvasTexture(canvas);
+
+      const ringGeo = new THREE.RingGeometry(innerR, outerR, 128);
+      const pos = ringGeo.attributes.position;
+      const uvs = ringGeo.attributes.uv;
+
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        const r = Math.sqrt(x * x + y * y);
+        const u = (r - innerR) / (outerR - innerR);
+        uvs.setXY(i, u, 0.5);
+      }
+      uvs.needsUpdate = true;
+
+      const ringMat = new THREE.MeshStandardMaterial({
+        map: ringTex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.95,
+        roughness: 0.6,
+        metalness: 0.1
+      });
+
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 2.3;
+      ringMesh.rotation.y = Math.PI / 12;
+      return ringMesh;
+    }
+
+    /* Uranus Vertical Tilted Ring */
+    function createUranusRingMesh(innerR, outerR) {
+      const ringGeo = new THREE.RingGeometry(innerR, outerR, 64);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.35
+      });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 1.05; // Tilted on its side!
+      return ringMesh;
+    }
+
+    /* =========================================
+     * TEXTURE LOADER HELPER (BASE64 + PROCEDURAL)
+     * ========================================= */
+    const texLoader = new THREE.TextureLoader();
+
+    function loadPlanetTexture(key, proceduralColor) {
+      if (window.PDS_TEXTURES && window.PDS_TEXTURES[key]) {
+        return texLoader.load(window.PDS_TEXTURES[key]);
+      }
+      const cv = document.createElement('canvas');
+      cv.width = 512; cv.height = 256;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = proceduralColor || '#475569';
+      ctx.fillRect(0, 0, 512, 256);
+      return new THREE.CanvasTexture(cv);
+    }
+
+    /* ==============================================================
+     * ASTRONOMICALLY COMPLETE SOLAR SYSTEM (10 BODIES IN ORDER)
+     * ============================================================== */
+    const ALL_BODIES_CONFIG = [
+      {
+        id: 'mercury',
+        name: 'Merkurius',
+        isStudyModule: false,
+        radius: 1.3,
+        dist: 14,
+        speed: 0.012,
+        colorHex: '#94a3b8',
+        diffuseKey: 'mercury'
+      },
+      {
+        id: 'venus',
+        name: 'Venus',
+        isStudyModule: false,
+        radius: 2.2,
+        dist: 20,
+        speed: 0.009,
+        colorHex: '#fde047',
+        diffuseKey: 'venus'
+      },
+      {
+        id: 'm1',
+        title: 'Siklus Data Sains',
+        isStudyModule: true,
+        type: 'earth',
+        radius: 3.5,
+        dist: 29,
+        speed: 0.0075,
+        colorHex: '#34d399',
+        threeGlow: 0x38bdf8,
+        diffuseKey: 'earth',
+        normalKey: 'earth_normal',
+        specularKey: 'earth_specular',
+        cloudsKey: 'earth_clouds',
+        hasMoon: true
+      },
+      {
+        id: 'm4',
+        title: 'Hierarchical Clustering',
+        isStudyModule: true,
+        type: 'mars',
+        radius: 2.9,
+        dist: 41,
+        speed: 0.0058,
+        colorHex: '#fb7185',
+        threeGlow: 0xfda4af,
+        diffuseKey: 'mars'
+      },
+      // (Main Asteroid Belt at Dist 49 - 53)
+      {
+        id: 'm3',
+        title: 'EDA & Visualisasi',
+        isStudyModule: true,
+        type: 'jupiter',
+        radius: 5.0,
+        dist: 64,
+        speed: 0.0042,
+        colorHex: '#818cf8',
+        threeGlow: 0xa5b4fc,
+        diffuseKey: 'jupiter',
+        hasGalileanMoons: true
+      },
+      {
+        id: 'm2',
+        title: 'Data Preprocessing',
+        isStudyModule: true,
+        type: 'saturn',
+        radius: 4.3,
+        dist: 82,
+        speed: 0.0033,
+        colorHex: '#fbbf24',
+        threeGlow: 0xfde68a,
+        diffuseKey: 'saturn',
+        hasRings: true,
+        hasTitan: true
+      },
+      {
+        id: 'uranus',
+        name: 'Uranus',
+        isStudyModule: false,
+        type: 'uranus',
+        radius: 3.1,
+        dist: 98,
+        speed: 0.0025,
+        colorHex: '#38bdf8',
+        diffuseKey: 'uranus',
+        hasUranusRing: true
+      },
+      {
+        id: 'm5',
+        title: 'Evaluasi Model',
+        isStudyModule: true,
+        type: 'neptune',
+        radius: 3.4,
+        dist: 114,
+        speed: 0.0019,
+        colorHex: '#38bdf8',
+        threeGlow: 0x7dd3fc,
+        diffuseKey: 'neptune'
+      },
+      {
+        id: 'pluto',
+        name: 'Pluto',
+        isStudyModule: false,
+        radius: 1.1,
+        dist: 128,
+        speed: 0.0014,
+        colorHex: '#cbd5e1',
+        proceduralColor: '#94a3b8'
+      }
+    ];
+
+    /* =========================================
+     * THREE.JS WORLD INITIALIZATION
+     * ========================================= */
+    let scene, camera, renderer, controls;
+    let planets = [];
+    let studyPlanets = [];
+    let sunMesh, sunCorona, cloudsMeshEarth, moonMesh;
+    let asteroidBelt, kuiperBelt, cometGroup, spaceStation;
+    let solarProminences = [];
+    let shootingStars = [];
+    let cometProgress = 0;
+    const container = document.getElementById('canvas-container');
+    const labelsLayer = document.getElementById('planet-labels-layer');
+
+    function initUniverse() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 5500);
+      camera.position.set(0, 58, 128);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.25;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxDistance = 350;
+      controls.minDistance = 8;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.22;
+
+      // 1. SKYBOX MILKY WAY DOME
+      const skyGeo = new THREE.SphereGeometry(2400, 64, 64);
+      const skyTex = loadPlanetTexture('skybox');
+      const skyMat = new THREE.MeshBasicMaterial({
+        map: skyTex,
+        side: THREE.BackSide,
+        color: 0x778899
+      });
+      scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+      // 2. SUN & SOLAR PROMINENCES
+      const sunGeo = new THREE.SphereGeometry(7.6, 64, 64);
+      const sunTex = loadPlanetTexture('sun');
+      const sunMat = new THREE.MeshBasicMaterial({
+        map: sunTex,
+        color: 0xfff6e5
+      });
+      sunMesh = new THREE.Mesh(sunGeo, sunMat);
+      scene.add(sunMesh);
+
+      // Sun Corona Flare
+      const coronaGeo = new THREE.SphereGeometry(9.8, 48, 48);
+      const coronaMat = new THREE.ShaderMaterial({
+        vertexShader: AtmosphereShader.vertexShader,
+        fragmentShader: AtmosphereShader.fragmentShader,
+        uniforms: {
+          glowColor: { value: new THREE.Color(0xf59e0b) },
+          intensityPower: { value: 2.1 }
+        },
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+        transparent: true
+      });
+      sunCorona = new THREE.Mesh(coronaGeo, coronaMat);
+      scene.add(sunCorona);
+
+      // Solar Prominences (Glowing plasma loops erupting from Sun)
+      createSolarProminences();
+
+      // Main Sunlight (Day/Night Terminator Lighting)
+      const sunLight = new THREE.PointLight(0xfffaed, 2.7, 750, 0.45);
+      scene.add(sunLight);
+
+      // Soft celestial ambient and hemisphere fill
+      const ambientLight = new THREE.AmbientLight(0x1e293b, 0.85);
+      scene.add(ambientLight);
+
+      const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x030712, 0.45);
+      scene.add(hemiLight);
+
+      // 3. MAIN ASTEROID BELT (BETWEEN MARS & JUPITER, Dist 48 - 54)
+      createAsteroidBelt();
+
+      // 4. OUTER KUIPER BELT (ICY CHUNKS AT DIST 134 - 150)
+      createKuiperBelt();
+
+      // 5. STREAKING COMET WITH TAIL
+      createStreakingComet();
+
+      // 6. SHOOTING STARS / METEORS
+      createShootingStars();
+
+      // 7. ORBITING SPACE STATION
+      createSpaceStation();
+
+      // 8. BUILD COMPLETE SOLAR SYSTEM PLANETS
+      ALL_BODIES_CONFIG.forEach((cfg, index) => {
+        const orbitPivot = new THREE.Group();
+        scene.add(orbitPivot);
+
+        // Orbital Guide Ring (Faint & refined)
+        const ringGeo = new THREE.RingGeometry(cfg.dist - 0.1, cfg.dist + 0.1, 128);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: cfg.isStudyModule ? cfg.threeGlow : 0x475569,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: cfg.isStudyModule ? 0.15 : 0.06
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.rotation.x = Math.PI / 2;
+        scene.add(ringMesh);
+
+        // Planet Group
+        const planetGroup = new THREE.Group();
+        planetGroup.position.x = cfg.dist;
+
+        // Core Sphere Geometry
+        const pGeo = new THREE.SphereGeometry(cfg.radius, 64, 64);
+        let pMat;
+
+        if (cfg.type === 'earth') {
+          pMat = new THREE.MeshPhongMaterial({
+            map: loadPlanetTexture(cfg.diffuseKey),
+            normalMap: loadPlanetTexture(cfg.normalKey),
+            normalScale: new THREE.Vector2(0.85, 0.85),
+            specularMap: loadPlanetTexture(cfg.specularKey),
+            specular: new THREE.Color(0x38bdf8),
+            shininess: 30
+          });
+
+          // Clouds
+          const cloudGeo = new THREE.SphereGeometry(cfg.radius * 1.025, 64, 64);
+          const cloudMat = new THREE.MeshStandardMaterial({
+            map: loadPlanetTexture(cfg.cloudsKey),
+            transparent: true,
+            opacity: 0.72,
+            blending: THREE.AdditiveBlending
+          });
+          cloudsMeshEarth = new THREE.Mesh(cloudGeo, cloudMat);
+          planetGroup.add(cloudsMeshEarth);
+
+          // Moon
+          const moonGeo = new THREE.SphereGeometry(0.85, 32, 32);
+          const moonMat = new THREE.MeshStandardMaterial({ map: loadPlanetTexture('moon'), roughness: 0.85 });
+          moonMesh = new THREE.Mesh(moonGeo, moonMat);
+          moonMesh.position.set(cfg.radius * 2.4, 0.4, 0);
+          planetGroup.add(moonMesh);
+
+        } else if (cfg.type === 'saturn') {
+          pMat = new THREE.MeshStandardMaterial({
+            map: loadPlanetTexture(cfg.diffuseKey),
+            roughness: 0.65,
+            metalness: 0.08
+          });
+
+          // Real Saturn Rings
+          const saturnRing = createSaturnRingMesh(cfg.radius * 1.45, cfg.radius * 2.85);
+          planetGroup.add(saturnRing);
+
+          // Titan Moon
+          const titanGeo = new THREE.SphereGeometry(0.75, 16, 16);
+          const titanMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.7 });
+          const titanMesh = new THREE.Mesh(titanGeo, titanMat);
+          titanMesh.position.set(cfg.radius * 3.4, 0.8, 0);
+          planetGroup.add(titanMesh);
+
+        } else if (cfg.hasGalileanMoons) {
+          // Jupiter + 4 Galilean Moons!
+          pMat = new THREE.MeshStandardMaterial({
+            map: loadPlanetTexture(cfg.diffuseKey),
+            roughness: 0.65,
+            metalness: 0.08
+          });
+
+          const moonColors = [0xfacc15, 0xe0f2fe, 0xa8a29e, 0x78716c]; // Io, Europa, Ganymede, Callisto
+          const moonRadii = [0.45, 0.4, 0.65, 0.55];
+          const moonDists = [cfg.radius * 1.6, cfg.radius * 2.1, cfg.radius * 2.7, cfg.radius * 3.4];
+          for (let m = 0; m < 4; m++) {
+            const mGeo = new THREE.SphereGeometry(moonRadii[m], 16, 16);
+            const mMat = new THREE.MeshStandardMaterial({ color: moonColors[m], roughness: 0.8 });
+            const mMesh = new THREE.Mesh(mGeo, mMat);
+            mMesh.position.set(moonDists[m], (m - 1.5) * 0.3, 0);
+            planetGroup.add(mMesh);
+          }
+
+        } else if (cfg.hasUranusRing) {
+          pMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            roughness: 0.6
+          });
+          const uRing = createUranusRingMesh(cfg.radius * 1.4, cfg.radius * 2.1);
+          planetGroup.add(uRing);
+
+        } else {
+          // Other planets
+          const tex = cfg.diffuseKey ? loadPlanetTexture(cfg.diffuseKey) : loadPlanetTexture('', cfg.proceduralColor);
+          pMat = new THREE.MeshStandardMaterial({
+            map: tex,
+            color: cfg.proceduralColor ? new THREE.Color(cfg.proceduralColor) : 0xffffff,
+            roughness: 0.7,
+            metalness: 0.08
+          });
+        }
+
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        pMesh.userData = { config: cfg, index: index };
+        planetGroup.add(pMesh);
+
+        // Atmosphere Glow (for study modules)
+        if (cfg.isStudyModule) {
+          const atmosGeo = new THREE.SphereGeometry(cfg.radius * 1.15, 48, 48);
+          const atmosMat = new THREE.ShaderMaterial({
+            vertexShader: AtmosphereShader.vertexShader,
+            fragmentShader: AtmosphereShader.fragmentShader,
+            uniforms: {
+              glowColor: { value: new THREE.Color(cfg.threeGlow) },
+              intensityPower: { value: 2.6 }
+            },
+            blending: THREE.AdditiveBlending,
+            side: THREE.BackSide,
+            transparent: true
+          });
+          planetGroup.add(new THREE.Mesh(atmosGeo, atmosMat));
+        }
+
+        orbitPivot.add(planetGroup);
+
+        const planetObj = {
+          config: cfg,
+          orbitPivot: orbitPivot,
+          planetGroup: planetGroup,
+          coreMesh: pMesh,
+          angle: index * (Math.PI * 2 / ALL_BODIES_CONFIG.length)
+        };
+
+        planets.push(planetObj);
+
+        if (cfg.isStudyModule) {
+          studyPlanets.push(planetObj);
+          createPlanetHUDPin(cfg, studyPlanets.length - 1);
+        }
+      });
+
+      // Window resize
+      window.addEventListener('resize', onResize);
+
+      // Raycaster for Planet Clicking
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const hitMeshes = studyPlanets.map(p => p.coreMesh);
+        const intersects = raycaster.intersectObjects(hitMeshes);
+
+        if (intersects.length > 0) {
+          const targetIndex = studyPlanets.findIndex(p => p.coreMesh === intersects[0].object);
+          if (targetIndex !== -1) warpToStudyPlanet(targetIndex);
+        }
+      });
+
+      animate();
+    }
+
+    /* SOLAR PROMINENCES (GLOWING PLASMA LOOPS) */
+    function createSolarProminences() {
+      for (let i = 0; i < 4; i++) {
+        const arcGeo = new THREE.TorusGeometry(7.6, 0.12, 8, 32, Math.PI / 1.8);
+        const arcMat = new THREE.MeshBasicMaterial({
+          color: 0xf59e0b,
+          transparent: true,
+          opacity: 0.65,
+          blending: THREE.AdditiveBlending
+        });
+        const arcMesh = new THREE.Mesh(arcGeo, arcMat);
+        arcMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        scene.add(arcMesh);
+        solarProminences.push(arcMesh);
+      }
+    }
+
+    /* MAIN ASTEROID BELT (BETWEEN MARS & JUPITER, Dist 48 - 54) */
+    function createAsteroidBelt() {
+      const count = 2200;
+      const geom = new THREE.DodecahedronGeometry(0.14, 0);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x5a5047,
+        roughness: 0.95,
+        metalness: 0.05
+      });
+
+      asteroidBelt = new THREE.InstancedMesh(geom, mat, count);
+      const dummy = new THREE.Object3D();
+
+      for (let i = 0; i < count; i++) {
+        const r = 51 + (Math.random() - 0.5) * 5.5;
+        const theta = Math.random() * Math.PI * 2;
+        const y = (Math.random() - 0.5) * 2.2;
+
+        dummy.position.set(Math.cos(theta) * r, y, Math.sin(theta) * r);
+        dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        const s = 0.5 + Math.random() * 0.9;
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+
+        asteroidBelt.setMatrixAt(i, dummy.matrix);
+      }
+      scene.add(asteroidBelt);
+    }
+
+    /* OUTER KUIPER BELT (ICY COMET NUCLEI AT DIST 134 - 150) */
+    function createKuiperBelt() {
+      const count = 2600;
+      const geom = new THREE.TetrahedronGeometry(0.16, 0);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x64748b,
+        roughness: 0.85,
+        metalness: 0.25
+      });
+
+      kuiperBelt = new THREE.InstancedMesh(geom, mat, count);
+      const dummy = new THREE.Object3D();
+
+      for (let i = 0; i < count; i++) {
+        const r = 140 + (Math.random() - 0.5) * 14.0;
+        const theta = Math.random() * Math.PI * 2;
+        const y = (Math.random() - 0.5) * 4.5;
+
+        dummy.position.set(Math.cos(theta) * r, y, Math.sin(theta) * r);
+        dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        const s = 0.4 + Math.random() * 0.8;
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+
+        kuiperBelt.setMatrixAt(i, dummy.matrix);
+      }
+      scene.add(kuiperBelt);
+    }
+
+    /* PERIODIC STREAKING COMET WITH TAIL */
+    function createStreakingComet() {
+      cometGroup = new THREE.Group();
+
+      const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+      const headMat = new THREE.MeshBasicMaterial({ color: 0xbae6fd });
+      cometGroup.add(new THREE.Mesh(headGeo, headMat));
+
+      const tailGeo = new THREE.ConeGeometry(0.85, 12, 16);
+      const tailMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending
+      });
+      const tailMesh = new THREE.Mesh(tailGeo, tailMat);
+      tailMesh.rotation.x = Math.PI / 2;
+      tailMesh.position.z = -6.0;
+      cometGroup.add(tailMesh);
+
+      scene.add(cometGroup);
+    }
+
+    /* SHOOTING STARS / METEORS */
+    function createShootingStars() {
+      for (let i = 0; i < 3; i++) {
+        const lineGeo = new THREE.BufferGeometry();
+        const pts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(-15, -8, -15)];
+        lineGeo.setFromPoints(pts);
+        const lineMat = new THREE.LineBasicMaterial({
+          color: 0xe0f2fe,
+          transparent: true,
+          opacity: 0.0
+        });
+        const star = new THREE.Line(lineGeo, lineMat);
+        star.userData = { active: false, speed: 2.5 };
+        scene.add(star);
+        shootingStars.push(star);
+      }
+    }
+
+    function triggerShootingStar(star) {
+      star.position.set(
+        (Math.random() - 0.5) * 300,
+        50 + Math.random() * 60,
+        (Math.random() - 0.5) * 300
+      );
+      star.material.opacity = 0.8;
+      star.userData.active = true;
+    }
+
+    /* ORBITING SPACE STATION */
+    function createSpaceStation() {
+      spaceStation = new THREE.Group();
+      const hubGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8);
+      const hubMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
+      spaceStation.add(new THREE.Mesh(hubGeo, hubMat));
+
+      const panelGeo = new THREE.BoxGeometry(2.8, 0.05, 0.6);
+      const panelMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.9, roughness: 0.2 });
+      spaceStation.add(new THREE.Mesh(panelGeo, panelMat));
+
+      const light = new THREE.PointLight(0x22c55e, 1.5, 12);
+      spaceStation.add(light);
+      scene.add(spaceStation);
+    }
+
+    /* SLEEK CLEAN FLOATING PINS (NO EXTRA BADGES) */
+    function createPlanetHUDPin(cfg, studyIdx) {
+      const pin = document.createElement('div');
+      pin.className = 'planet-pin';
+      pin.id = `pin-${cfg.id}`;
+      pin.innerHTML = `
+        <div class="planet-tag">
+          <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${cfg.colorHex}; box-shadow: 0 0 10px ${cfg.colorHex};"></span>
+          <span>${cfg.title}</span>
+        </div>
+        <div class="pin-stem"></div>
+      `;
+      pin.onclick = () => warpToStudyPlanet(studyIdx);
+      labelsLayer.appendChild(pin);
+    }
+
+    function updatePinsPositions() {
+      studyPlanets.forEach(p => {
+        const pin = document.getElementById(`pin-${p.config.id}`);
+        if (!pin) return;
+
+        const worldPos = new THREE.Vector3();
+        p.planetGroup.getWorldPosition(worldPos);
+        worldPos.y += p.config.radius * 1.4;
+
+        worldPos.project(camera);
+
+        const x = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
+        const y = -(worldPos.y * 0.5 - 0.5) * window.innerHeight;
+
+        if (worldPos.z < 1) {
+          pin.style.display = 'flex';
+          pin.style.left = `${x}px`;
+          pin.style.top = `${y}px`;
+        } else {
+          pin.style.display = 'none';
+        }
+      });
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Rotate Sun & Prominences
+      if (sunMesh) sunMesh.rotation.y += 0.003;
+      solarProminences.forEach((p, i) => {
+        p.rotation.z += (i % 2 === 0 ? 0.002 : -0.002);
+      });
+
+      // Belts Rotation
+      if (asteroidBelt) asteroidBelt.rotation.y += 0.0006 * orbitSpeedMultiplier;
+      if (kuiperBelt) kuiperBelt.rotation.y += 0.0002 * orbitSpeedMultiplier;
+
+      // Comet Flight
+      cometProgress += 0.0035;
+      if (cometGroup) {
+        const cx = Math.sin(cometProgress) * 110;
+        const cz = Math.cos(cometProgress) * 55;
+        const cy = Math.sin(cometProgress * 2) * 22 + 8;
+        cometGroup.position.set(cx, cy, cz);
+        cometGroup.lookAt(0, 0, 0);
+      }
+
+      // Shooting stars animation
+      shootingStars.forEach(star => {
+        if (star.userData.active) {
+          star.position.x += star.userData.speed * 2.5;
+          star.position.y -= star.userData.speed * 1.5;
+          star.position.z += star.userData.speed * 2.5;
+          star.material.opacity -= 0.015;
+          if (star.material.opacity <= 0) {
+            star.userData.active = false;
+          }
+        } else if (Math.random() < 0.004) {
+          triggerShootingStar(star);
+        }
+      });
+
+      // Space Station
+      if (spaceStation) {
+        const t = Date.now() * 0.0008;
+        spaceStation.position.set(Math.cos(t) * 24, Math.sin(t * 1.5) * 3, Math.sin(t) * 24);
+        spaceStation.rotation.y += 0.01;
+      }
+
+      // Earth Clouds & Moon
+      if (cloudsMeshEarth) cloudsMeshEarth.rotation.y += 0.005;
+      if (moonMesh) {
+        const time = Date.now() * 0.001;
+        moonMesh.position.x = Math.cos(time * 0.8) * 7.5;
+        moonMesh.position.z = Math.sin(time * 0.8) * 7.5;
+      }
+
+      // Orbit & Axial rotation of ALL planets
+      planets.forEach(p => {
+        p.angle += p.config.speed * orbitSpeedMultiplier;
+        p.planetGroup.position.x = Math.cos(p.angle) * p.config.dist;
+        p.planetGroup.position.z = Math.sin(p.angle) * p.config.dist;
+        p.coreMesh.rotation.y += 0.009 * (orbitSpeedMultiplier > 0 ? orbitSpeedMultiplier : 0.2);
+      });
+
+      // REAL-TIME PLANET CAMERA TRACKING (FOLLOWS ORBIT 60 FPS)
+      if (trackedPlanet && !isCameraWarping) {
+        const currentPlanetPos = new THREE.Vector3();
+        trackedPlanet.planetGroup.getWorldPosition(currentPlanetPos);
+
+        const delta = currentPlanetPos.clone().sub(controls.target);
+        controls.target.copy(currentPlanetPos);
+        camera.position.add(delta);
+      }
+
+      if (controls) controls.update();
+      updatePinsPositions();
+
+      renderer.render(scene, camera);
+    }
+
+    /* ==============================================================
+     * REAL-TIME DYNAMIC PLANET TRACKING & CAMERA WARP SYSTEM
+     * ============================================================== */
+    let trackedPlanet = null;
+    let isCameraWarping = false;
+    let activeWarpTween = null;
+
+    function getPlanetVantageOffset(p) {
+      let r = p.config.radius;
+      if (p.config.type === 'saturn') r = 6.8;
+      else if (p.config.type === 'uranus') r = 4.6;
+      else if (p.config.type === 'jupiter') r = 6.2;
+
+      const angle = p.angle;
+      return new THREE.Vector3(
+        -Math.cos(angle) * (r * 1.6) - Math.sin(angle) * (r * 2.8),
+        r * 1.85,
+        -Math.sin(angle) * (r * 1.6) + Math.cos(angle) * (r * 2.8)
+      );
+    }
+
+    function lockCameraToPlanet(p, duration = 1.5, onComplete = null) {
+      if (!p) return;
+      trackedPlanet = p;
+      isCameraWarping = true;
+      controls.autoRotate = false;
+      PDSSound.warp();
+
+      if (activeWarpTween) activeWarpTween.kill();
+
+      const startTarget = controls.target.clone();
+      const startCamPos = camera.position.clone();
+
+      activeWarpTween = gsap.to({ t: 0 }, {
+        t: 1,
+        duration: duration,
+        ease: 'power2.inOut',
+        onUpdate: function() {
+          const progress = this.targets()[0].t;
+          const currentPlanetPos = new THREE.Vector3();
+          p.planetGroup.getWorldPosition(currentPlanetPos);
+
+          const vantageOffset = getPlanetVantageOffset(p);
+          const desiredCamPos = currentPlanetPos.clone().add(vantageOffset);
+
+          controls.target.lerpVectors(startTarget, currentPlanetPos, progress);
+          camera.position.lerpVectors(startCamPos, desiredCamPos, progress);
+        },
+        onComplete: function() {
+          isCameraWarping = false;
+          activeWarpTween = null;
+          if (onComplete) onComplete();
+        }
+      });
+    }
+
+    function warpToStudyPlanet(target) {
+      let p;
+      if (typeof target === 'string') {
+        p = studyPlanets.find(sp => sp.config.id === target);
+      } else if (typeof target === 'number') {
+        p = studyPlanets[target];
+      }
+      if (!p) return;
+
+      lockCameraToPlanet(p, 1.5, () => {
+        openHoloModal(p.config.id);
+      });
+    }
+
+    function resetOrbitView() {
+      trackedPlanet = null;
+      isCameraWarping = true;
+      if (activeWarpTween) activeWarpTween.kill();
+
+      const modal = document.getElementById('holo-modal');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      controls.autoRotate = false;
+      PDSSound.click();
+
+      const startTarget = controls.target.clone();
+      const startCamPos = camera.position.clone();
+      const endTarget = new THREE.Vector3(0, 0, 0);
+      const endCamPos = new THREE.Vector3(0, 58, 128);
+
+      activeWarpTween = gsap.to({ t: 0 }, {
+        t: 1,
+        duration: 1.6,
+        ease: 'power2.inOut',
+        onUpdate: function() {
+          const progress = this.targets()[0].t;
+          controls.target.lerpVectors(startTarget, endTarget, progress);
+          camera.position.lerpVectors(startCamPos, endCamPos, progress);
+        },
+        onComplete: function() {
+          isCameraWarping = false;
+          activeWarpTween = null;
+          controls.autoRotate = true;
+        }
+      });
+    }
+
+    function closeHoloModal() {
+      resetOrbitView();
+    }
+
+    /* ==============================================================
+     * HOLO-READER MODAL & LIVE LAB SIMULATORS (SOFT TONED PALETTE)
+     * ============================================================== */
+
+    /* ==============================================================
+     * GAMIFIED MINI QUIZ DATA PER MODULE
+     * ============================================================== */
+    const QUIZ_DATA = {
+      m1: {
+        question: "Dalam 6 fase siklus data sains (Cielen et al., 2016), tahap manakah yang mencakup penanganan missing values dan penskalaan fitur (scaling)?",
+        options: [
+          "Setting Research Goal",
+          "Data Preparation (Pembersihan Data)",
+          "Data Modeling"
+        ],
+        correct: 1,
+        explanation: "Data Preparation adalah fase utama pembersihan, imputasi, dan standardisasi fitur sebelum model dilatih."
+      },
+      m2: {
+        question: "Kapan metode Imputasi Median jauh lebih dianjurkan dibandingkan Mean untuk mengisi missing values?",
+        options: [
+          "Saat data berdistribusi normal simetris sempurna",
+          "Saat data memiliki pencilan (outlier) ekstrem atau sangat miring (skewed)",
+          "Saat fitur bertipe data teks non-numerik"
+        ],
+        correct: 1,
+        explanation: "Median adalah ukuran pemusatan yang kebal (robust) terhadap pencilan ekstrem, sedangkan Mean akan terdistorsi jauh."
+      },
+      m3: {
+        question: "Perintah Pandas mana yang paling cepat menampilkan ringkasan 5 angka statistik (Mean, Std, Min, Q1, Median, Q3, Max)?",
+        options: [
+          "df.shape",
+          "df.info()",
+          "df.describe()"
+        ],
+        correct: 2,
+        explanation: "df.describe() merangkum tabel 5 angka statistik dan parameter sebaran untuk semua kolom numerik."
+      },
+      m4: {
+        question: "Pada metode Hierarchical Clustering dengan Single Linkage, bagaimana jarak antar 2 cluster dihitung?",
+        options: [
+          "Jarak terdekat (minimum) antara sepasang titik antar-cluster",
+          "Jarak terjauh (maksimum) antar titik (Complete Linkage)",
+          "Rata-rata jarak seluruh kombinasi pasangan titik"
+        ],
+        correct: 0,
+        explanation: "Single linkage menghitung jarak minimum sepasang titik terdekat antar cluster, rentan terhadap efek chaining."
+      },
+      m5: {
+        question: "Dalam kasus diagnosis medis kanker atau fraud detection di mana lolosnya kasus positif (False Negative) berakibat fatal, metrik apa yang wajib dimaksimalkan?",
+        options: [
+          "Akurasi (Accuracy)",
+          "Recall (Sensitivitas)",
+          "Presisi (Precision)"
+        ],
+        correct: 1,
+        explanation: "Recall = TP / (TP + FN). Memaksimalkan Recall berarti menekan False Negative (kasus positif yang terlewat) sekecil mungkin."
+      }
+    };
+
+    const MODAL_DATA = {
+      m1: {
+        badge: "Siklus Hidup Data Sains",
+        readtime: "5 Menit Baca",
+        html: `
+          <h1>Kupas Tuntas: 6 Tahapan Proses Data Sains</h1>
+          <p class="text-slate-300">
+            <strong>Analisis Abstrak Artikel Ilmiah:</strong> <em>"The Effect of Preprocessing Techniques, Applied to Numeric Features, on Classification Algorithms' Performance"</em> (Esra'a Alshdaifat et al., 2021).
+          </p>
+
+          <h2>1. Pemetaan 6 Tahap Siklus Hidup Data Sains (Cielen et al., 2016)</h2>
+          <ul>
+            <li><strong>1. Setting Research Goal (Menentukan Tujuan):</strong> Menguji secara sistematis pengaruh berbagai teknik preprocessing fitur numerik terhadap akurasi algoritma klasifikasi.</li>
+            <li><strong>2. Retrieving Data (Pengumpulan Data):</strong> Mengunduh dan menggunakan <strong>18 benchmark dataset publik</strong> (UCI Machine Learning Repository) dengan karakteristik missing value dan skewness yang beragam.</li>
+            <li><strong>3. Data Preparation (Pembersihan Data):</strong> Menerapkan variasi strategi penanganan missing values (mean, median, mode imputation, dropna) serta teknik normalisasi/skalasi fitur (Min-Max Normalization, Z-score Standardization, Decimal Scaling).</li>
+            <li><strong>4. Data Exploration / EDA:</strong> <span class="text-sky-400 font-bold">[Tahap Implisit]</span> Menganalisis bentuk sebaran distribusi numerik (skewness), mendeteksi pencilan (outliers), dan mengidentifikasi pola missingness (MCAR, MAR, MNAR) untuk memilih metode scaling yang tepat.</li>
+            <li><strong>5. Data Modeling &amp; Evaluation (Pemodelan &amp; Evaluasi):</strong> Melatih algoritma klasifikasi (Decision Tree, Naive Bayes, k-NN, Random Forest) dan mengevaluasi kinerja dengan <em>k-fold cross-validation</em> serta <strong>uji signifikansi statistik</strong> (Friedman Test &amp; Wilcoxon Test) untuk menjamin validitas ilmiah.</li>
+            <li><strong>6. Presentation &amp; Automation:</strong> <span class="text-sky-400 font-bold">[Tahap Implisit]</span> Merumuskan matriks rekomendasi kombinasi preprocessing optimal bagi data scientist dan mengemas pipeline otomatisasi (Scikit-Learn Pipeline).</li>
+          </ul>
+
+          <h2>2. Evaluasi Pemodelan dalam Konteks Abstrak</h2>
+          <p>
+            Riset ini tidak sekadar membandingkan angka akurasi mentah, melainkan menerapkan <strong>uji signifikansi statistik</strong> untuk membuktikan bahwa keunggulan Z-score atau normalisasi tertentu bukan disebabkan oleh faktor kebetulan (*random chance*).
+          </p>
+        `
+      },
+      m2: {
+        badge: "Pembersihan Data & Outlier",
+        readtime: "6 Menit Baca",
+        html: `
+          <h1>Kupas Tuntas: Pre-Processing Tabel &amp; Outlier</h1>
+          <p>
+            Diberikan tabel data 6 baris dengan kolom: <code class="text-sky-300">id</code>, <code class="text-sky-300">jenis_kelamin</code>, <code class="text-sky-300">usia</code>, <code class="text-sky-300">pendapatan</code>, <code class="text-sky-300">pengeluaran</code>, <code class="text-sky-300">kategori</code>.
+          </p>
+
+          <h2>a. Tahapan Pre-processing yang Wajib Dilakukan</h2>
+          <ol>
+            <li><strong>Drop Kolom ID:</strong> Hapus kolom <code class="text-sky-300">id</code> karena hanya nomor indeks tanpa korelasi prediktif.</li>
+            <li><strong>Koreksi Usia Negatif:</strong> Nilai <code class="text-rose-400">usia = -20</code> adalah human error (salah ketik tanda minus); ubah menjadi nilai mutlak <code class="text-emerald-400">20</code>.</li>
+            <li><strong>Imputasi Missing Values:</strong> Baris 3 (pendapatan) dan baris 4 (pengeluaran) bernilai NaN.</li>
+            <li><strong>Penanganan Outlier Ekstrem:</strong> Baris 5 memiliki <code class="text-rose-400">pendapatan = 15000.0</code> (rentang normal hanya 100 - 150).</li>
+            <li><strong>Encoding Kategorikal:</strong> Ubah <code class="text-sky-300">jenis_kelamin</code> menjadi biner (0/1) dan <code class="text-sky-300">kategori</code> menjadi ordinal (0, 1, 2).</li>
+            <li><strong>Feature Scaling:</strong> Lakukan Z-Score atau RobustScaler agar skala variabel seimbang.</li>
+          </ol>
+
+          <h2>b. Penanganan Missing Value dan Outlier</h2>
+          <ul>
+            <li><strong>Missing Value:</strong> Wajib gunakan <strong>Imputasi Median</strong>. Ukuran sampel sangat kecil ($N=6$); menghapus baris akan membuang 33% sampel! Median pendapatan valid adalah <strong>115.0</strong>.</li>
+            <li><strong>Outlier:</strong> Terapkan <strong>Winsorizing / Capping</strong> pada Upper Fence ($Q_3 + 1.5 \\times \\text{IQR}$) atau periksa kemungkinan typo (seharusnya 150.0).</li>
+          </ul>
+
+          <h2>c. 4 Akibat Fatal Jika Tanpa Pre-processing</h2>
+          <ol>
+            <li><strong>Runtime Crash:</strong> Python melempar <code class="text-rose-400">ValueError: Input contains NaN</code>.</li>
+            <li><strong>Dominasi Skala:</strong> Fitur berangka 15.000 mendominasi 99% jarak Euclidean, mematikan peran usia.</li>
+            <li><strong>Distorsi Model:</strong> Outlier menarik garis regresi secara ekstrem (*high leverage*).</li>
+            <li><strong>Cacat Logika:</strong> Usia -20 merusak interpretasi bisnis (*Garbage In, Garbage Out*).</li>
+          </ol>
+
+          <!-- Embedded Live Lab Widget -->
+          <div class="bg-slate-900/90 border border-slate-700/60 p-5 rounded-2xl my-4 space-y-3">
+            <h3 class="text-base font-bold text-sky-400 flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4"></i>
+              <span>Simulator Interaktif Outlier Clamping (Coba Geser):</span>
+            </h3>
+            <div class="flex justify-between text-xs text-slate-300">
+              <span>Nilai Pendapatan Baris 5:</span>
+              <span id="lab-outlier-text" class="font-bold text-sky-400">15,000.0</span>
+            </div>
+            <input type="range" min="150" max="15000" step="150" value="15000" oninput="runOutlierSim(this.value)" class="w-full accent-sky-500 cursor-pointer">
+            <div class="grid grid-cols-2 gap-3 text-center text-xs">
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-rose-500/30">
+                <div class="text-rose-400 font-bold">Mean (Rata-rata)</div>
+                <div id="lab-mean-val" class="text-base font-extrabold text-slate-100">3,096.7 (Rusak!)</div>
+              </div>
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-emerald-500/30">
+                <div class="text-emerald-400 font-bold">Median (Nilai Tengah)</div>
+                <div id="lab-median-val" class="text-base font-extrabold text-emerald-300">115.0 (Kokoh!)</div>
+              </div>
+            </div>
+            <button onclick="toggleLabWinsorize()" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs transition">
+              Terapkan Winsorizing / Capping ke Upper Fence (187.5)
+            </button>
+          </div>
+        `
+      },
+      m3: {
+        badge: "Eksplorasi Data mtcars",
+        readtime: "5 Menit Baca",
+        html: `
+          <h1>Kupas Tuntas: df_mtcars Coding &amp; Interpretasi</h1>
+
+          <h2>a. 4 Baris Mantra Eksplorasi Data Non-Visual (Pandas)</h2>
+          <div class="code-box">
+df_mtcars.shape            # Mengetahui dimensi (jumlah baris dan kolom)
+df_mtcars.info()             # Mengetahui tipe data & cek kolom non-null
+df_mtcars.describe()         # Statistik 5 angka (mean, std, min, Q1, median, Q3, max)
+df_mtcars.isnull().sum()     # Menghitung jumlah missing value per kolom
+          </div>
+
+          <h2>b. Syntax Boxplot HP &amp; Scatterplot Price vs HP</h2>
+          <div class="code-box">
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# 1. Boxplot Horizontal Horsepower
+sns.boxplot(x=df_mtcars['HP'])
+plt.show()
+
+# 2. Scatterplot Price vs HP
+sns.scatterplot(x='HP', y='Price', data=df_mtcars)
+plt.show()
+          </div>
+
+          <h2>Interpretasi Gambar Ujian:</h2>
+          <ul>
+            <li><strong>Boxplot HP:</strong> Nilai tengah (median) berada di sekitar 180-200 HP. Distribusi data <strong>menceng ke kanan (right-skewed)</strong> karena kumis sebelah kanan jauh lebih panjang. Terdapat titik pencilan (outliers) di atas 450-500 HP.</li>
+            <li><strong>Scatterplot Price vs HP:</strong> Menunjukkan <strong>hubungan linier positif kuat</strong> (semakin besar tenaga mesin HP, harga Price semakin tinggi). Pada HP rendah harga homogen, sedangkan pada HP tinggi harga menyebar luas (heteroskedastisitas).</li>
+          </ul>
+        `
+      },
+      m4: {
+        badge: "Hierarchical Clustering",
+        readtime: "6 Menit Baca",
+        html: `
+          <h1>Kupas Tuntas: Dendrogram mtcars &amp; Ward Linkage</h1>
+
+          <h2>a. Jenis Metode Clustering pada Gambar</h2>
+          <p>
+            Metode yang digunakan adalah <strong>Hierarchical Clustering</strong> dengan pendekatan <strong>Aglomeratif (Bottom-Up)</strong> menggunakan metode penggabungan <strong>Ward's Minimum Variance Method (<code class="text-amber-300">ward.D2</code>)</strong>. Metode Ward menggabungkan klaster yang meminimalkan peningkatan varians total di dalam klaster (*within-cluster sum of squares*).
+          </p>
+
+          <h2>b. Jumlah Klaster jika Dipotong pada Distance = 6</h2>
+          <p>
+            Jika ditarik garis horizontal pada sumbu Y di nilai ambang <code class="text-amber-400 font-bold">Distance = 6</code>, garis tersebut memotong tepat <strong>4 garis vertikal utama</strong> pada dendrogram. Oleh karena itu, terbentuk <strong>4 klaster (clusters)</strong>.
+          </p>
+
+          <!-- Embedded Live Dendrogram Cutter Widget -->
+          <div class="bg-slate-900/90 border border-slate-700/60 p-5 rounded-2xl my-4 space-y-3">
+            <h3 class="text-base font-bold text-amber-400 flex items-center justify-between">
+              <span>Simulator Laser Pemotong Dendrogram:</span>
+              <span id="lab-k-badge" class="bg-amber-500 text-slate-950 px-3 py-0.5 rounded-full text-xs font-black">
+                4 Klaster Terbentuk
+              </span>
+            </h3>
+            <div class="flex justify-between text-xs text-slate-300">
+              <span>Tinggi Pemotongan (Distance):</span>
+              <span id="lab-dist-val" class="font-bold text-amber-400">6.0</span>
+            </div>
+            <input type="range" min="1" max="13" step="0.5" value="6" oninput="runDendroSim(this.value)" class="w-full accent-amber-500 cursor-pointer">
+            <div id="lab-dendro-note" class="bg-amber-950/40 border border-amber-500/20 p-3 rounded-xl text-xs text-amber-200">
+              🌟 <strong>KUNCI JAWABAN:</strong> Pada pemotongan <strong>Distance = 6.0</strong>, laser merah memotong 4 cabang vertikal utama, menghasilkan tepat <strong>4 klaster</strong>.
+            </div>
+          </div>
+
+          <h2>c. Metode Penentuan Jumlah Klaster Tepat</h2>
+          <ul>
+            <li><strong>Silhouette Coefficient:</strong> Mengukur keseimbangan antara kohesi internal ($a$) dan separasi eksternal ($b$). Nilai terbaik adalah yang mendekati $+1$.</li>
+            <li><strong>Elbow Method:</strong> Menghitung nilai Within-Cluster Sum of Squares (WCSS) dan mencari titik belokan siku (*elbow point*).</li>
+            <li><strong>Longest Vertical Distance:</strong> Memotong dendrogram pada jarak celah vertikal terpanjang yang belum terpotong garis horizontal lain.</li>
+          </ul>
+        `
+      },
+      m5: {
+        badge: "Evaluasi Model Klasifikasi",
+        readtime: "5 Menit Baca",
+        html: `
+          <h1>Kupas Tuntas: 4 Metrik Evaluasi Klasifikasi</h1>
+          <p class="text-slate-300">
+            Pahami perbedaannya melalui analogi <strong>Pemeriksaan Pasien Kanker</strong>:
+          </p>
+
+          <h2>1. Akurasi (Accuracy)</h2>
+          <p>
+            $$\\text{Akurasi} = \\frac{TP + TN}{\\text{Total Sampel}}$$
+            Berapa banyak seluruh tebakan model yang benar. <strong>Kelemahan:</strong> Sangat menyesatkan pada data yang tidak seimbang (*imbalanced data*).
+          </p>
+
+          <h2>2. Presisi (Precision) — Cegah Alarm Palsu!</h2>
+          <p>
+            $$\\text{Presisi} = \\frac{TP}{TP + FP}$$
+            Dari semua yang dituduh Sakit oleh dokter, berapa yang BENERAN Sakit? Penting saat salah tuduh berakibat fatal (contoh: Filter Email Spam).
+          </p>
+
+          <h2>3. Recall (Sensitivitas) — Cegah Kecolongan!</h2>
+          <p>
+            $$\\text{Recall} = \\frac{TP}{TP + FN}$$
+            Dari semua orang yang ASLINYA Sakit, berapa persen yang BERHASIL DITANGKAP dokter? Penting saat kecolongan berakibat nyawa (contoh: Deteksi Kanker atau Deteksi Penipuan Kartu Kredit).
+          </p>
+
+          <h2>4. F1-Score — Jalan Tengah yang Adil</h2>
+          <p>
+            $$F_1 = 2 \\times \\frac{\\text{Presisi} \\times \\text{Recall}}{\\text{Presisi} + \\text{Recall}}$$
+            Rata-rata harmonik antara Presisi dan Recall. Wajib digunakan saat data timpang!
+          </p>
+
+          <!-- Embedded Speedometer Matrix Lab -->
+          <div class="bg-slate-900/90 border border-slate-700/60 p-5 rounded-2xl my-4 space-y-3">
+            <h3 class="text-base font-bold text-sky-400">Simulator Trade-Off Presisi vs Recall:</h3>
+            <div class="flex justify-between text-xs text-slate-300">
+              <span>Threshold Keputusan (&theta;):</span>
+              <span id="lab-thresh-val" class="font-bold text-sky-400">0.50</span>
+            </div>
+            <input type="range" min="0.1" max="0.9" step="0.05" value="0.5" oninput="runSpeedoSim(this.value)" class="w-full accent-sky-500 cursor-pointer">
+            <div class="grid grid-cols-4 gap-2 text-center text-xs">
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">Akurasi</div>
+                <div id="sp-acc" class="font-bold text-sky-400">92.5%</div>
+              </div>
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">Presisi</div>
+                <div id="sp-prec" class="font-bold text-amber-400">81.8%</div>
+              </div>
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">Recall</div>
+                <div id="sp-rec" class="font-bold text-rose-400">90.0%</div>
+              </div>
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">F1-Score</div>
+                <div id="sp-f1" class="font-bold text-emerald-400">85.7%</div>
+              </div>
+            </div>
+            <div id="lab-speedo-insight" class="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+              💡 Naikkan threshold untuk menaikkan Presisi (cegah alarm palsu); turunkan threshold untuk menaikkan Recall (cegah kecolongan).
+            </div>
+          </div>
+        `
+      }
+    };
+
+    function openHoloModal(id) {
+      const modal = document.getElementById('holo-modal');
+      const badge = document.getElementById('holo-badge');
+      const readtime = document.getElementById('holo-readtime');
+      const body = document.getElementById('holo-content-body');
+
+      const data = MODAL_DATA[id];
+      if (!data) return;
+
+      badge.innerText = data.badge;
+      readtime.innerHTML = `<i data-lucide="clock" class="w-4 h-4"></i> <span>${data.readtime}</span>`;
+      body.innerHTML = data.html;
+
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      lucide.createIcons();
+
+      // Render KaTeX Math
+      // Inject Gamified Mini Quiz if available
+      if (QUIZ_DATA[id]) {
+        const q = QUIZ_DATA[id];
+        const quizContainer = document.createElement('div');
+        quizContainer.className = 'mt-8 pt-5 border-t border-slate-800/80';
+        quizContainer.innerHTML = `
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-300 font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5 border border-amber-500/30">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i> ⚡ Uji Pemahaman Cepat (Mini Quiz)
+            </span>
+          </div>
+          <p class="text-sm font-bold text-slate-200 mb-3">${q.question}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5" id="quiz-options-container">
+            ${q.options.map((opt, oIdx) => `
+              <button onclick="checkQuizAnswer('${id}', ${oIdx}, ${q.correct}, '${q.explanation.replace(/'/g, "\\'")}')" class="quiz-opt-${id} text-left px-3.5 py-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/60 text-xs text-slate-300 transition font-medium">
+                ${String.fromCharCode(65 + oIdx)}. ${opt}
+              </button>
+            `).join('')}
+          </div>
+          <div id="quiz-feedback-${id}" class="hidden"></div>
+        `;
+        body.appendChild(quizContainer);
+        lucide.createIcons();
+      }
+
+      if (window.renderMathInElement) {
+        renderMathInElement(body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+
+      PDSSound.click();
+    }
+
+
+
+    function readAloudModal() {
+      if (!('speechSynthesis' in window)) {
+        alert('Fitur Text-to-Speech tidak didukung browser ini.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const text = document.getElementById('holo-content-body').innerText;
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'id-ID';
+      utt.rate = 1.05;
+      window.speechSynthesis.speak(utt);
+      PDSSound.success();
+    }
+
+    /* ==============================================================
+     * EMBEDDED LAB SIMULATOR CONTROLLERS
+     * ============================================================== */
+    function runOutlierSim(val) {
+      const v = parseFloat(val);
+      document.getElementById('lab-outlier-text').innerText = v.toLocaleString();
+      const arr = [100.0, 120.0, 115.0, 150.0, v, 110.0];
+      const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+      document.getElementById('lab-mean-val').innerText = `${mean.toFixed(1)} (Rusak!)`;
+      document.getElementById('lab-median-val').innerText = '115.0 (Kokoh!)';
+      PDSSound.hover();
+    }
+
+    function toggleLabWinsorize() {
+      const upperFence = 187.5;
+      document.getElementById('lab-outlier-text').innerText = '187.5 (Capped!)';
+      const arr = [100.0, 120.0, 115.0, 150.0, upperFence, 110.0];
+      const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+      document.getElementById('lab-mean-val').innerText = `${mean.toFixed(1)} (Kembali Wajar)`;
+      confetti({ particleCount: 30, spread: 50 });
+      PDSSound.success();
+    }
+
+    function runDendroSim(val) {
+      const v = parseFloat(val);
+      document.getElementById('lab-dist-val').innerText = v.toFixed(1);
+      const badge = document.getElementById('lab-k-badge');
+      const note = document.getElementById('lab-dendro-note');
+
+      let k = 1;
+      if (v < 3.0) k = 6;
+      else if (v < 5.0) k = 5;
+      else if (v <= 7.0) k = 4;
+      else if (v < 10.0) k = 3;
+      else if (v < 13.0) k = 2;
+
+      badge.innerText = `${k} Klaster Terbentuk`;
+      if (k === 4) {
+        badge.className = 'bg-amber-500 text-slate-950 px-3 py-0.5 rounded-full text-xs font-black animate-pulse';
+        note.innerHTML = `🌟 <strong>KUNCI JAWABAN:</strong> Pada pemotongan <strong>Distance = ${v.toFixed(1)}</strong>, laser merah memotong 4 cabang vertikal utama, menghasilkan tepat <strong>4 klaster</strong>.`;
+      } else {
+        badge.className = 'bg-slate-700 text-white px-3 py-0.5 rounded-full text-xs font-black';
+        note.innerHTML = `💡 Pada ketinggian <strong>Distance = ${v.toFixed(1)}</strong>, terbentuk <strong>${k} klaster</strong>.`;
+      }
+      PDSSound.hover();
+    }
+
+    function runSpeedoSim(val) {
+      const t = parseFloat(val);
+      document.getElementById('lab-thresh-val').innerText = t.toFixed(2);
+      const totalPos = 50, totalNeg = 150;
+      const tp = Math.round(totalPos * Math.max(0.2, 1.1 - t));
+      const fn = totalPos - tp;
+      const fp = Math.round(totalNeg * Math.max(0.02, 0.45 - (t * 0.45)));
+      const tn = totalNeg - fp;
+
+      const acc = ((tp + tn) / (tp + tn + fp + fn)) * 100;
+      const prec = tp + fp > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = tp + fn > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec > 0) ? (2 * (prec * rec) / (prec + rec)) : 0;
+
+      document.getElementById('sp-acc').innerText = `${acc.toFixed(1)}%`;
+      document.getElementById('sp-prec').innerText = `${prec.toFixed(1)}%`;
+      document.getElementById('sp-rec').innerText = `${rec.toFixed(1)}%`;
+      document.getElementById('sp-f1').innerText = `${f1.toFixed(1)}%`;
+
+      const insight = document.getElementById('lab-speedo-insight');
+      if (t > 0.6) {
+        insight.innerHTML = `⚠️ <strong>Threshold Tinggi:</strong> Presisi naik (${prec.toFixed(1)}%), tapi Recall anjlok (${rec.toFixed(1)}%). Cocok untuk cegah salah tuduh/spam.`;
+      } else if (t < 0.35) {
+        insight.innerHTML = `⚠️ <strong>Threshold Rendah:</strong> Recall naik (${rec.toFixed(1)}%), tapi Presisi anjlok (${prec.toFixed(1)}%). Cocok untuk deteksi penyakit.`;
+      } else {
+        insight.innerHTML = `✅ <strong>Threshold Seimbang:</strong> Memberikan F1-Score optimal (${f1.toFixed(1)}%).`;
+      }
+      PDSSound.hover();
+    }
+
+    // Launch Universe
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initUniverse();
+    });
+
+    /* ==============================================================
+     * ADVANCED INTERACTIVE FEATURES: FULLSCREEN, TOUR, SPEED, QUIZ
+     * ============================================================== */
+    let orbitSpeedMultiplier = 1.0;
+    const SPEED_STEPS = [1.0, 2.0, 4.0, 0.0, 0.5];
+    let speedStepIdx = 0;
+
+    function cycleOrbitSpeed() {
+      speedStepIdx = (speedStepIdx + 1) % SPEED_STEPS.length;
+      orbitSpeedMultiplier = SPEED_STEPS[speedStepIdx];
+      const label = document.getElementById('speed-label');
+      const btn = document.getElementById('speed-btn');
+      
+      if (orbitSpeedMultiplier === 0.0) {
+        label.textContent = 'Jeda';
+        btn.classList.add('border-amber-500/60', 'text-amber-400');
+        btn.classList.remove('text-sky-400');
+      } else {
+        label.textContent = `${orbitSpeedMultiplier}x`;
+        btn.classList.remove('border-amber-500/60', 'text-amber-400');
+        btn.classList.add('text-sky-400');
+      }
+      PDSSound.click();
+    }
+
+    /* FULLSCREEN CONTROLLER */
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn("Fullscreen error:", err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+      PDSSound.click();
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const isFS = !!document.fullscreenElement;
+      const icon = document.getElementById('fullscreen-icon');
+      if (icon) {
+        icon.setAttribute('data-lucide', isFS ? 'minimize' : 'maximize');
+        lucide.createIcons();
+      }
+    });
+
+    /* SHORTCUTS MODAL TOGGLE */
+    function toggleShortcutsModal() {
+      const modal = document.getElementById('shortcuts-modal');
+      const isHidden = modal.classList.contains('pointer-events-none');
+      if (isHidden) {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+      } else {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+      }
+      PDSSound.click();
+    }
+
+    /* CINEMATIC GUIDED TOUR */
+    let isTourActive = false;
+    let tourStep = 0;
+    let tourTimer = null;
+    let tourProgressInterval = null;
+    let tourProgressValue = 0;
+    const TOUR_DURATION_MS = 8000;
+
+    const TOUR_DATA = [
+      {
+        targetId: 'm1',
+        badge: "Step 1/5",
+        title: "Bumi: Siklus Hidup Data Sains",
+        desc: "Mengeksplorasi metodologi CRISP-DM 6 fase: dari penetapan tujuan bisnis hingga deployment otomatisasi."
+      },
+      {
+        targetId: 'm2',
+        badge: "Step 2/5",
+        title: "Saturnus: Preprocessing & Outlier",
+        desc: "Menangani missing values (Imputasi Mean/Median vs Drop), koreksi data anomali, dan penskalaan Z-score vs Min-Max."
+      },
+      {
+        targetId: 'm3',
+        badge: "Step 3/5",
+        title: "Jupiter: EDA & Visualisasi",
+        desc: "Pemeriksaan struktur data non-visual (describe, info) dan visualisasi pola distribusi (Boxplot & Scatterplot)."
+      },
+      {
+        targetId: 'm4',
+        badge: "Step 4/5",
+        title: "Mars: Hierarchical Clustering",
+        desc: "Mengelompokkan data tanpa label menggunakan kedekatan hierarki (Single, Complete, Average Linkage) & Dendrogram."
+      },
+      {
+        targetId: 'm5',
+        badge: "Step 5/5",
+        title: "Neptunus: Evaluasi Model Klasifikasi",
+        desc: "Matriks kebingungan (Confusion Matrix), kalkulasi Precision, Recall, F1-Score, dan analisis biaya False Negative."
+      }
+    ];
+
+    function toggleGuidedTour() {
+      if (isTourActive) {
+        endGuidedTour();
+      } else {
+        startGuidedTour();
+      }
+    }
+
+    function startGuidedTour() {
+      isTourActive = true;
+      tourStep = 0;
+      closeHoloModal();
+      
+      const tourBtn = document.getElementById('tour-btn');
+      const tourLabel = document.getElementById('tour-btn-label');
+      const tourIcon = document.getElementById('tour-btn-icon');
+      if (tourLabel) tourLabel.textContent = 'Hentikan Tour';
+      if (tourIcon) tourIcon.setAttribute('data-lucide', 'square');
+
+      const hud = document.getElementById('tour-hud');
+      hud.classList.remove('opacity-0', 'pointer-events-none');
+      lucide.createIcons();
+      executeTourStep(0);
+    }
+
+    function endGuidedTour() {
+      isTourActive = false;
+      clearTimeout(tourTimer);
+      clearInterval(tourProgressInterval);
+
+      const tourBtn = document.getElementById('tour-btn');
+      const tourLabel = document.getElementById('tour-btn-label');
+      const tourIcon = document.getElementById('tour-btn-icon');
+      if (tourLabel) tourLabel.textContent = 'Tour Galaksi';
+      if (tourIcon) tourIcon.setAttribute('data-lucide', 'play');
+
+      const hud = document.getElementById('tour-hud');
+      hud.classList.add('opacity-0', 'pointer-events-none');
+      lucide.createIcons();
+      resetOrbitView();
+    }
+
+    function executeTourStep(stepIdx) {
+      if (!isTourActive) return;
+      tourStep = stepIdx;
+      const data = TOUR_DATA[stepIdx];
+      const p = studyPlanets.find(sp => sp.config.id === data.targetId);
+
+      document.getElementById('tour-badge').textContent = data.badge;
+      document.getElementById('tour-title').textContent = data.title;
+      document.getElementById('tour-desc').textContent = data.desc;
+
+      // Lock onto the moving planet in real-time
+      if (p) {
+        lockCameraToPlanet(p, 1.5);
+      }
+
+      // Progress bar animation
+      clearInterval(tourProgressInterval);
+      tourProgressValue = 0;
+      const bar = document.getElementById('tour-progress-bar');
+      bar.style.width = '0%';
+
+      const intervalMs = 100;
+      tourProgressInterval = setInterval(() => {
+        if (!isTourActive) {
+          clearInterval(tourProgressInterval);
+          return;
+        }
+        tourProgressValue += (intervalMs / TOUR_DURATION_MS) * 100;
+        bar.style.width = `${Math.min(tourProgressValue, 100)}%`;
+      }, intervalMs);
+
+      clearTimeout(tourTimer);
+      tourTimer = setTimeout(() => {
+        if (!isTourActive) return;
+        if (tourStep < TOUR_DATA.length - 1) {
+          executeTourStep(tourStep + 1);
+        } else {
+          // Finish tour
+          confetti({ particleCount: 120, spread: 90, origin: { y: 0.6 } });
+          PDSSound.success();
+          setTimeout(() => endGuidedTour(), 2500);
+        }
+      }, TOUR_DURATION_MS);
+    }
+
+    function nextTourStep() {
+      if (tourStep < TOUR_DATA.length - 1) {
+        executeTourStep(tourStep + 1);
+      } else {
+        endGuidedTour();
+      }
+    }
+
+    function prevTourStep() {
+      if (tourStep > 0) {
+        executeTourStep(tourStep - 1);
+      }
+    }
+
+    function openCurrentTourModal() {
+      clearTimeout(tourTimer);
+      clearInterval(tourProgressInterval);
+      warpToStudyPlanet(TOUR_DATA[tourStep].targetId);
+    }
+
+    /* KEYBOARD SHORTCUTS LISTENER */
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        cycleOrbitSpeed();
+      } else if (e.key === 't' || e.key === 'T') {
+        toggleGuidedTour();
+      } else if (e.key === '?') {
+        toggleShortcutsModal();
+      } else if (e.key === 'Escape' || e.key === '0') {
+        if (isTourActive) endGuidedTour();
+        resetOrbitView();
+      } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
+        const idx = parseInt(e.key) - 1;
+        if (isTourActive) endGuidedTour();
+        warpToStudyPlanet(idx);
+      }
+    });
+
+    /* GAMIFIED QUICK QUIZ CHECKER */
+    function checkQuizAnswer(questionId, selectedIdx, correctIdx, explanation) {
+      const feedbackEl = document.getElementById(`quiz-feedback-${questionId}`);
+      if (!feedbackEl) return;
+
+      const buttons = document.querySelectorAll(`.quiz-opt-${questionId}`);
+      buttons.forEach((btn, idx) => {
+        btn.disabled = true;
+        if (idx === correctIdx) {
+          btn.classList.add('bg-emerald-600/40', 'border-emerald-500', 'text-emerald-200');
+          btn.classList.remove('bg-slate-800/60');
+        } else if (idx === selectedIdx && selectedIdx !== correctIdx) {
+          btn.classList.add('bg-rose-600/40', 'border-rose-500', 'text-rose-200');
+        }
+      });
+
+      feedbackEl.classList.remove('hidden');
+      if (selectedIdx === correctIdx) {
+        feedbackEl.className = 'mt-3 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold leading-relaxed';
+        feedbackEl.innerHTML = `<strong>🎉 Luar Biasa, Benar!</strong> ${explanation}`;
+        PDSSound.success();
+        confetti({ particleCount: 90, spread: 75, origin: { y: 0.65 } });
+      } else {
+        feedbackEl.className = 'mt-3 p-3 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold leading-relaxed';
+        feedbackEl.innerHTML = `<strong>Belum Tepat!</strong> Jawaban yang benar adalah opsi ke-${correctIdx + 1}. ${explanation}`;
+        PDSSound.click();
+      }
+    }
+
+  </script>
+</body>
+</html>
