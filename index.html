@@ -92,19 +92,24 @@
       cursor: grabbing;
     }
 
-    /* Minimalist Top HUD Header */
+    /* Mobile-Optimized Top HUD Header */
     .hud-header {
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       z-index: 20;
-      padding: 1.25rem 2rem;
+      padding: 0.75rem 0.75rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: linear-gradient(180deg, rgba(2, 4, 10, 0.88) 0%, rgba(2, 4, 10, 0) 100%);
+      background: linear-gradient(180deg, rgba(2, 4, 10, 0.95) 0%, rgba(2, 4, 10, 0) 100%);
       pointer-events: none;
+    }
+    @media (min-width: 640px) {
+      .hud-header {
+        padding: 1.25rem 2rem;
+      }
     }
     .hud-header * {
       pointer-events: auto;
@@ -160,21 +165,34 @@
     /* Minimal Bottom Dock */
     .warp-dock {
       position: absolute;
-      bottom: 1.5rem;
+      bottom: 0.75rem;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 20;
+      z-index: 30;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      background: rgba(9, 14, 28, 0.85);
+      gap: 0.35rem;
+      background: rgba(9, 14, 28, 0.92);
       backdrop-filter: blur(20px);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      padding: 0.5rem 0.8rem;
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 0.4rem 0.6rem;
       border-radius: 9999px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.1);
-      max-width: 95vw;
+      max-width: 96vw;
       overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .warp-dock::-webkit-scrollbar {
+      display: none;
+    }
+    @media (min-width: 640px) {
+      .warp-dock {
+        bottom: 1.5rem;
+        padding: 0.5rem 0.8rem;
+        gap: 0.5rem;
+      }
     }
     .dock-btn {
       display: flex;
@@ -204,12 +222,53 @@
       user-select: text;
     }
     .holo-card {
-      background: rgba(10, 15, 28, 0.95);
+      background: rgba(10, 15, 28, 0.96);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
       border: 1px solid rgba(148, 163, 184, 0.25);
-      border-radius: 28px;
+      border-radius: 20px;
       box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.1);
+      width: 100% !important;
+      max-width: calc(100vw - 16px) !important;
+      box-sizing: border-box;
+    }
+    @media (min-width: 640px) {
+      .holo-card {
+        border-radius: 28px;
+        max-width: 56rem !important;
+      }
+    }
+
+    /* Prevent wide content from breaking mobile modal */
+    .holo-text {
+      word-break: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
+    .holo-text pre {
+      white-space: pre-wrap !important;
+      word-break: break-all !important;
+      overflow-x: auto !important;
+      max-width: 100% !important;
+      font-size: 11px !important;
+    }
+    @media (min-width: 640px) {
+      .holo-text pre {
+        white-space: pre !important;
+        font-size: 12.5px !important;
+      }
+    }
+    .holo-text table {
+      display: block;
+      overflow-x: auto;
+      max-width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+    }
+    @media (min-width: 640px) {
+      .holo-text table {
+        font-size: 13.5px;
+      }
     }
 
     .holo-text h1 {
@@ -288,53 +347,53 @@
   <!-- 2. SLEEK MINIMAL HUD HEADER                -->
   <!-- ========================================== -->
   <header class="hud-header">
-    <div class="flex items-center space-x-3.5">
-      <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 p-[1.5px] shadow-lg shadow-sky-500/20 flex items-center justify-center">
-        <div class="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center text-sky-400">
-          <i data-lucide="orbit" class="w-6 h-6 animate-spin" style="animation-duration: 25s;"></i>
+    <div class="flex items-center space-x-2 sm:space-x-3.5">
+      <div class="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 p-[1.5px] shadow-lg shadow-sky-500/20 flex items-center justify-center shrink-0">
+        <div class="w-full h-full bg-slate-950 rounded-xl sm:rounded-2xl flex items-center justify-center text-sky-400">
+          <i data-lucide="orbit" class="w-4 h-4 sm:w-6 sm:h-6 animate-spin" style="animation-duration: 25s;"></i>
         </div>
       </div>
       <div>
-        <h1 class="font-display font-extrabold text-xl text-slate-100 tracking-tight">PDS <span class="text-sky-400">OBSERVATORY</span></h1>
-        <p class="text-xs text-slate-400">Tata Surya Lengkap • Klik Planet Berpenanda untuk Membuka Materi</p>
+        <h1 class="font-display font-extrabold text-sm sm:text-xl text-slate-100 tracking-tight whitespace-nowrap">PDS <span class="text-sky-400">OBSERVATORY</span></h1>
+        <p class="hidden sm:block text-xs text-slate-400">Tata Surya Lengkap • Klik Planet Berpenanda untuk Membuka Materi</p>
       </div>
     </div>
 
     <!-- HUD Action Controls -->
-    <div class="flex items-center space-x-2 sm:space-x-3">
+    <div class="flex items-center space-x-1.5 sm:space-x-2.5">
       <!-- Cinematic Guided Tour Button -->
-      <button id="tour-btn" onclick="toggleGuidedTour()" title="Mulai Tour Sinematik Otomatis (T)" class="px-3 py-2 rounded-xl bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white font-bold text-xs flex items-center space-x-1.5 shadow-lg shadow-sky-500/25 transition">
-        <i id="tour-btn-icon" data-lucide="play" class="w-4 h-4 fill-white"></i>
-        <span id="tour-btn-label" class="hidden sm:inline">Tour Galaksi</span>
+      <button id="tour-btn" onclick="toggleGuidedTour()" title="Mulai Tour Sinematik Otomatis (T)" class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white font-bold text-[11px] sm:text-xs flex items-center space-x-1 sm:space-x-1.5 shadow-lg shadow-sky-500/25 transition">
+        <i id="tour-btn-icon" data-lucide="play" class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white"></i>
+        <span id="tour-btn-label">Tour</span>
       </button>
 
       <!-- Orbit Speed Multiplier -->
-      <button id="speed-btn" onclick="cycleOrbitSpeed()" title="Ubah Kecepatan Orbit (Spasi untuk Jeda)" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-sky-400 hover:bg-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition shadow-lg">
-        <i data-lucide="gauge" class="w-4 h-4"></i>
+      <button id="speed-btn" onclick="cycleOrbitSpeed()" title="Ubah Kecepatan Orbit (Spasi untuk Jeda)" class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-sky-400 hover:bg-slate-800 text-[11px] sm:text-xs font-semibold flex items-center space-x-1 transition shadow-lg">
+        <i data-lucide="gauge" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
         <span id="speed-label" class="font-mono">1x</span>
       </button>
 
       <!-- Fullscreen Toggle -->
-      <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Layar Penuh (F)" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:text-sky-400 hover:bg-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition shadow-lg">
-        <i id="fullscreen-icon" data-lucide="maximize" class="w-4 h-4"></i>
-        <span class="hidden md:inline">Fullscreen</span>
+      <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Layar Penuh (F)" class="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:text-sky-400 hover:bg-slate-800 text-[11px] sm:text-xs font-semibold flex items-center space-x-1.5 transition shadow-lg">
+        <i id="fullscreen-icon" data-lucide="maximize" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span class="hidden md:inline">Layar Penuh</span>
       </button>
 
-      <!-- Keyboard Shortcuts Info -->
-      <button onclick="toggleShortcutsModal()" title="Pintasan Keyboard (?)" class="p-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-400 hover:text-sky-400 hover:bg-slate-800 text-xs font-semibold transition shadow-lg">
+      <!-- Keyboard Shortcuts Info (Hidden on small mobile) -->
+      <button onclick="toggleShortcutsModal()" title="Pintasan Keyboard (?)" class="hidden sm:flex p-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-400 hover:text-sky-400 hover:bg-slate-800 text-xs font-semibold transition shadow-lg">
         <i data-lucide="keyboard" class="w-4 h-4"></i>
       </button>
 
       <!-- Ambient Audio Toggle -->
-      <button id="sfx-toggle" onclick="toggleAudio()" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-sky-400 hover:bg-slate-800 text-xs font-semibold flex items-center space-x-1.5 transition shadow-lg">
-        <i id="audio-icon" data-lucide="volume-2" class="w-4 h-4"></i>
-        <span id="audio-label" class="hidden sm:inline">SFX</span>
+      <button id="sfx-toggle" onclick="toggleAudio()" class="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 text-sky-400 hover:bg-slate-800 text-[11px] sm:text-xs font-semibold flex items-center space-x-1 transition shadow-lg">
+        <i id="audio-icon" data-lucide="volume-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span id="audio-label" class="hidden lg:inline">SFX</span>
       </button>
 
       <!-- Reset Orbit Camera -->
-      <button onclick="resetOrbitView()" title="Kembali ke Pusat Orbit (Esc / 0)" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-sky-500/30 text-sky-300 font-bold text-xs flex items-center space-x-1.5 shadow-lg transition">
-        <i data-lucide="compass" class="w-4 h-4 text-sky-400"></i>
-        <span class="hidden sm:inline">Orbit Pusat</span>
+      <button onclick="resetOrbitView()" title="Kembali ke Pusat Orbit (Esc / 0)" class="p-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-sky-500/30 text-sky-300 font-bold text-[11px] sm:text-xs flex items-center space-x-1 shadow-lg transition">
+        <i data-lucide="compass" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400"></i>
+        <span class="hidden sm:inline">Pusat</span>
       </button>
     </div>
   </header>
@@ -346,7 +405,7 @@
   <!-- ========================================== -->
   <!-- 2.1 CINEMATIC GUIDED TOUR OVERLAY HUD       -->
   <!-- ========================================== -->
-  <div id="tour-hud" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[92vw] bg-slate-900/95 backdrop-blur-2xl border border-sky-500/40 rounded-2xl p-4 shadow-2xl shadow-sky-500/20 opacity-0 pointer-events-none transition-all duration-300">
+  <div id="tour-hud" class="fixed bottom-16 sm:bottom-24 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[94vw] bg-slate-900/95 backdrop-blur-2xl border border-sky-500/40 rounded-2xl p-3 sm:p-4 shadow-2xl shadow-sky-500/20 opacity-0 pointer-events-none transition-all duration-300">
     <!-- Progress Indicator Line -->
     <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden mb-3">
       <div id="tour-progress-bar" class="h-full bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-500 w-0 transition-all duration-300"></div>
@@ -851,8 +910,14 @@
       const height = window.innerHeight;
 
       scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 5500);
-      camera.position.set(0, 58, 128);
+      const isMobilePortrait = width < height;
+      const initialFov = isMobilePortrait ? 60 : 45;
+      camera = new THREE.PerspectiveCamera(initialFov, width / height, 0.1, 5500);
+      if (isMobilePortrait) {
+        camera.position.set(0, 80, 185);
+      } else {
+        camera.position.set(0, 58, 128);
+      }
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
       renderer.setSize(width, height);
@@ -1290,9 +1355,12 @@
     }
 
     function onResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.fov = (w < h) ? 60 : 45;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(w, h);
     }
 
     function animate() {
@@ -1380,15 +1448,16 @@
     let activeWarpTween = null;
 
     function getPlanetVantageOffset(p) {
-      let r = p.config.radius;
-      if (p.config.type === 'saturn') r = 6.8;
-      else if (p.config.type === 'uranus') r = 4.6;
-      else if (p.config.type === 'jupiter') r = 6.2;
+      const isMobile = window.innerWidth < 640;
+      let r = p.config.radius * (isMobile ? 1.35 : 1.0);
+      if (p.config.type === 'saturn') r = isMobile ? 8.5 : 6.8;
+      else if (p.config.type === 'uranus') r = isMobile ? 5.8 : 4.6;
+      else if (p.config.type === 'jupiter') r = isMobile ? 7.8 : 6.2;
 
       const angle = p.angle;
       return new THREE.Vector3(
         -Math.cos(angle) * (r * 1.6) - Math.sin(angle) * (r * 2.8),
-        r * 1.85,
+        r * 1.95,
         -Math.sin(angle) * (r * 1.6) + Math.cos(angle) * (r * 2.8)
       );
     }
@@ -2040,8 +2109,12 @@ plt.show()
       const tourBtn = document.getElementById('tour-btn');
       const tourLabel = document.getElementById('tour-btn-label');
       const tourIcon = document.getElementById('tour-btn-icon');
-      if (tourLabel) tourLabel.textContent = 'Hentikan Tour';
+      if (tourLabel) tourLabel.textContent = 'Hentikan';
       if (tourIcon) tourIcon.setAttribute('data-lucide', 'square');
+
+      // Hide dock during tour for clean immersion
+      const dock = document.querySelector('.warp-dock');
+      if (dock) dock.classList.add('opacity-0', 'pointer-events-none');
 
       const hud = document.getElementById('tour-hud');
       hud.classList.remove('opacity-0', 'pointer-events-none');
@@ -2053,6 +2126,10 @@ plt.show()
       isTourActive = false;
       clearTimeout(tourTimer);
       clearInterval(tourProgressInterval);
+
+      // Restore dock when tour ends
+      const dock = document.querySelector('.warp-dock');
+      if (dock) dock.classList.remove('opacity-0', 'pointer-events-none');
 
       const tourBtn = document.getElementById('tour-btn');
       const tourLabel = document.getElementById('tour-btn-label');
